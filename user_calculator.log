@@ -1,0 +1,2 @@
+2025-11-25 15:05:06,216 - INFO - User entered: a=1.0, b=0.0, op='/'
+2025-11-25 15:05:06,216 - ERROR - Attempted division by zero!
