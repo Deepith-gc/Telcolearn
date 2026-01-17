@@ -1,0 +1,98 @@
+## ✅ 1. Controller Logs
+
+```
+Default flow installed
+High priority flow for h1
+Medium priority flow for h2
+Low priority flow for h3
+```
+
+**Meaning:**
+
+* Ryu controller correctly installed the flow rules with priorities 300, 200, 100, 0.
+* The switch is ready to match traffic based on these priorities.
+
+---
+
+## ✅ 2. Mininet Topology
+
+```
+h1-eth0:s1-eth1
+h2-eth0:s1-eth2
+h3-eth0:s1-eth3
+```
+
+**Meaning:**
+
+* Single switch (s1) connected to three hosts (h1, h2, h3).
+* Topology matches the lab plan.
+
+---
+
+## ✅ 3. Flow Table Verification
+
+```
+priority=300,ip,nw_src=10.0.0.1 actions=FLOOD
+priority=200,ip,nw_src=10.0.0.2 actions=FLOOD
+priority=100,ip,nw_src=10.0.0.3 actions=FLOOD
+priority=0 actions=FLOOD
+```
+
+**Meaning:**
+
+* Priority rules are installed correctly.
+* Packets from h1 match highest priority first, then h2, then h3.
+* FLOOD action sends packets to all ports; currently **no bandwidth control**.
+
+---
+
+## ✅ 4. Ping Test
+
+```
+h1 → h2: RTT ~0.158 ms
+h2 → h3: RTT ~0.143 ms
+h1 → h3: RTT ~0.173 ms
+```
+
+**Meaning:**
+
+* Connectivity works perfectly.
+* No packet loss, showing the network is functional.
+
+---
+
+## ✅ 5. Iperf Bandwidth Test
+
+```
+h1 → h2: 24 Gbits/sec
+h3 → h2: 25.4 Gbits/sec
+```
+
+**Meaning:**
+
+* Both flows get full bandwidth.
+* **Priority rules only match traffic**, they do **not limit bandwidth yet**.
+
+---
+
+## ✅ 6. What Your Demo Proves
+
+* Controller-driven flow installation ✅
+* Priority-based flow matching ✅
+* Network connectivity ✅
+
+**Note:** To show **actual QoS**, you need OVS queues or meters.
+
+---
+
+## ✅ 7. Interview Tip
+
+* **Safe explanation:**
+
+> “We implemented priority-based flow handling using OpenFlow rules. The switch matches higher-priority rules first. Bandwidth guarantees would require queues or meters.”
+
+---
+
+If you want, the **next logical step** is a small upgrade to **actually control bandwidth per host** using OVS queues, which makes the QoS demo more realistic and impressive.
+
+Do you want me to create that next?

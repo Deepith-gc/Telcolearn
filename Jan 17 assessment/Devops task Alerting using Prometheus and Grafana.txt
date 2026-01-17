@@ -1,0 +1,268 @@
+Absolutely! 🎯 I’ll create a **clean, optimized execution-only guide** with commands and short one-liners for each step. This is perfect for **capturing screenshots and generating a PDF** later.
+
+I’ll also give you a **ready-to-use prompt** at the end for PDF generation.
+
+---
+
+# **Execution-Only Guide – Prometheus & Grafana on EC2**
+
+---
+
+## **Step 0 – EC2 Instance & Security**
+
+**Purpose:** Launch Ubuntu instance and open necessary ports.
+
+```text
+Ubuntu 22.04 LTS EC2 instance
+Security Group rules:
+- SSH (22) → your IP
+- Prometheus (9090) → your IP
+- Grafana (3000) → your IP
+- Node Exporter (9100) → your IP
+```
+
+---
+
+## **Step 1 – Install Node Exporter**
+
+**Purpose:** Expose CPU/Memory metrics.
+
+```bash
+sudo apt update
+sudo apt install -y prometheus-node-exporter
+sudo systemctl enable node-exporter
+sudo systemctl start node-exporter
+curl http://localhost:9100/metrics | head
+```
+
+**Screenshot idea:** Metrics page showing `node_cpu_seconds_total` and `node_memory_MemAvailable_bytes`.
+
+---
+
+## **Step 2 – Install Prometheus**
+
+**Purpose:** Collect metrics and evaluate alerts.
+
+```bash
+sudo apt install -y prometheus
+```
+
+**Check directories:**
+
+```bash
+ls /etc/prometheus
+# prometheus.yml should be present
+```
+
+---
+
+## **Step 3 – Create Alert Rules**
+
+**Purpose:** Define CPU & Memory alerts.
+
+```bash
+sudo vim /etc/prometheus/alert.rules.yml
+```
+
+**Paste:**
+
+```yaml
+groups:
+- name: infrastructure-alerts
+  rules:
+
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage above 80% for 2 minutes"
+
+  - alert: LowMemoryAvailable
+    expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 20
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Low available memory"
+      description: "Available memory below 20%"
+```
+
+---
+
+## **Step 4 – Configure Prometheus**
+
+**Purpose:** Scrape Node Exporter and include alert rules.
+
+```bash
+sudo vim /etc/prometheus/prometheus.yml
+```
+
+**Content:**
+
+```yaml
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+```
+
+**Restart Prometheus:**
+
+```bash
+sudo systemctl enable prometheus
+sudo systemctl restart prometheus
+```
+
+**Verify:**
+
+* Targets: `http://<EC2-IP>:9090/targets`
+* Alerts: `http://<EC2-IP>:9090/alerts`
+
+---
+
+## **Step 5 – Install Grafana**
+
+**Purpose:** Visualize metrics and alerts.
+
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+sudo apt update
+sudo apt install -y grafana
+sudo systemctl enable grafana-server
+sudo systemctl start grafana-server
+```
+
+**Access:** `http://<EC2-IP>:3000` (admin/admin)
+
+---
+
+## **Step 6 – Connect Grafana to Prometheus**
+
+**Purpose:** Make Prometheus metrics available in Grafana.
+
+* Grafana → **Settings → Data Sources → Add Data Source**
+* Choose **Prometheus**
+* URL: `http://localhost:9090`
+* Click **Save & Test**
+
+---
+
+## **Step 7 – Create Dashboard Panels**
+
+**Purpose:** Visualize CPU and Memory with thresholds.
+
+### CPU Panel
+
+**Query:**
+
+```promql
+100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+```
+
+**Panel options:**
+
+* Title: `CPU Usage (%)`
+* Field → Unit: Percent (0–100)
+* Field → Thresholds: Red above 80
+
+### Memory Panel
+
+**Query:**
+
+```promql
+(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100
+```
+
+**Panel options:**
+
+* Title: `Memory Usage (%)`
+* Field → Unit: Percent (0–100)
+* Field → Thresholds: Red above 80
+
+**Save dashboard:**
+Name: `Server Monitoring Dashboard`
+
+**Screenshot idea:** CPU & Memory panels with green/red visualization.
+
+---
+
+## **Step 8 – Simulate Alerts**
+
+**CPU Alert demo:**
+
+```bash
+sudo apt install -y stress
+stress --cpu 2
+```
+
+* Prometheus: Alerts → `HighCPUUsage → FIRING`
+* Grafana: CPU panel → red above 80
+* Stop stress: `CTRL+C`
+
+**Memory Alert demo:** Optional if small EC2; explain for interview.
+
+---
+
+## **Step 9 – Live Demo Checklist**
+
+| Item                           | Status |
+| ------------------------------ | ------ |
+| Node Exporter running          | ✅      |
+| Prometheus targets UP          | ✅      |
+| alert.rules.yml present        | ✅      |
+| Prometheus alerts page visible | ✅      |
+| CPU alert demo                 | ✅      |
+| Grafana dashboard visible      | ✅      |
+| Red alert indicators           | ✅      |
+
+---
+
+# **Step 10 – One-liners for Screenshots**
+
+* **Node Exporter metrics page:** Exposes CPU, memory, disk, network.
+* **Prometheus targets page:** Confirms metrics source is UP.
+* **Prometheus alerts page:** Shows firing/inactive alerts.
+* **Grafana dashboard:** Visualizes metrics, thresholds indicate alerts.
+* **CPU alert demo:** Stress triggers CPU alert → panel turns red.
+
+---
+
+# **Optimized Prompt to Generate PDF**
+
+You can copy this directly to **ChatGPT / AI PDF generator**:
+
+```
+Create a PDF document with the following:
+
+Title: Prometheus & Grafana EC2 Execution Guide
+Include:
+- Stepwise execution commands for installing Node Exporter, Prometheus, Grafana
+- Prometheus alert rules
+- Grafana panel setup with CPU and Memory queries
+- Screenshots placeholder with captions:
+  - Node Exporter metrics page: Exposes CPU, memory, disk, network
+  - Prometheus targets page: Confirms metrics source is UP
+  - Prometheus alerts page: Shows firing/inactive alerts
+  - Grafana dashboard: Visualizes metrics with threshold alerts
+  - CPU alert demo: Stress triggers CPU alert → panel turns red
+- Add one-liner description under each command or screenshot
+- Format commands in monospace font
+- Highlight important tips in bold
+```
+
+---
+
+If you want, I can make a **ready-to-copy PDF version with commands, one-liners, and captions placeholders** so you literally just paste it in Word/Google Docs and export.
+
+Do you want me to do that?

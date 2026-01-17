@@ -1,0 +1,337 @@
+Perfect! Let’s create a **complete, beginner-friendly, fully corrected Lab Guide for Q1 + Q2**, **VM/headless ready**, including **step-by-step commands, explanations, and reasoning**. I’ll break it into **Q1** (Traffic Throttling with Mininet + Ryu) and **Q2** (Verify Controller Decisions with REST API), and then explain **why/how/what/when/where everything works** at the end.
+
+---
+
+# 🔹 FULL LAB GUIDE: SDN with Mininet + Ryu
+
+---
+
+## **Q1: Dynamic Traffic Throttling (Meters) in SDN**
+
+### **Scenario / Objective**
+
+Imagine you are a network engineer in a lab:
+
+* Heavy traffic is slowing the network between **6 PM – 9 PM**.
+* Goal: **Limit bandwidth for certain hosts** dynamically, without restarting the network.
+* Tools: Mininet (virtual lab), Ryu controller, OpenFlow 1.3 (supports meters).
+
+---
+
+### **Step 1: Design a Simple Topology**
+
+Use **single-switch topology**:
+
+```
+h1 ----\
+        s1 ---- h3
+h2 ----/
+```
+
+* 1 switch, 3 hosts → easy to monitor
+* h1 and h2 → traffic test
+* h3 → optional extra host
+
+**Reason:** Small, clear, yet demonstrates SDN principles.
+
+---
+
+### **Step 2: Start Mininet**
+
+In **VM shell**:
+
+```bash
+sudo mn --topo single,3 --controller=remote --switch ovsk,protocols=OpenFlow13
+```
+
+* `single,3` → 1 switch, 3 hosts
+* `remote` → uses external Ryu controller
+* `ovsk` → Open vSwitch supporting OpenFlow 1.3
+* `protocols=OpenFlow13` → needed for meters
+
+**Check connectivity:**
+
+```bash
+mininet> pingall
+```
+
+---
+
+### **Step 3: Start Ryu Controller**
+
+In a **separate VM terminal**:
+
+```bash
+ryu-manager /usr/local/lib/python3.8/dist-packages/ryu/app/simple_switch_13.py
+```
+
+* OpenFlow 1.3 learning switch app
+* Handles **basic forwarding**
+* Later we’ll add **meters** manually
+
+---
+
+### **Step 4: Normal Traffic Test**
+
+```bash
+mininet> h1 ping -c 3 h2
+```
+
+* Confirm hosts can reach each other
+* Controller automatically installs **basic forwarding flows**
+
+---
+
+### **Step 5: Apply Traffic Throttling (Meters)**
+
+**Add a meter (limit to 1 Mbps)**:
+
+```bash
+mininet> sh ovs-ofctl -O OpenFlow13 add-meter s1 meter=1,kbps,band=type=drop,rate=1000
+```
+
+* `meter=1` → meter ID
+* `rate=1000` → 1 Mbps
+* `drop` → drop packets exceeding the rate
+
+**Attach meter to h1 traffic**:
+
+```bash
+mininet> sh ovs-ofctl -O OpenFlow13 add-flow s1 priority=100,ip,nw_src=10.0.0.1,actions=meter:1,normal
+```
+
+* Flows with **source IP 10.0.0.1** (h1) are throttled
+* `normal` → other traffic follows default forwarding
+
+---
+
+### **Step 6: Test Traffic Throttling**
+
+1. Start iperf server:
+
+```bash
+mininet> h2 iperf -s &
+```
+
+2. Start iperf client:
+
+```bash
+mininet> h1 iperf -c 10.0.0.2 -t 20 -i 1
+```
+
+3. Observe bandwidth:
+
+* Should **not exceed ~1 Mbps** → throttling works
+
+---
+
+### **Step 7: Remove Throttling (Dynamic Change)**
+
+```bash
+mininet> sh ovs-ofctl -O OpenFlow13 del-flows s1
+```
+
+* All flows removed
+* Full bandwidth restored
+* No network restart required
+
+---
+
+### **Step 8: Inspect Flow Table**
+
+```bash
+mininet> sh ovs-ofctl -O OpenFlow13 dump-flows s1
+```
+
+* Verify flows, priorities, meters
+
+---
+
+### ✅ **Q1 Summary / Why it Works**
+
+* SDN separates **control plane (Ryu)** from **data plane (s1 switch)**
+* **Meters** limit bandwidth dynamically
+* Flows can be **added or removed at runtime**
+* Demonstrates **flexibility of SDN over traditional networks**
+
+---
+
+## **Q2: Verify Controller Decisions Using REST APIs**
+
+---
+
+### **Step 1: Start Ryu Controller With REST Support**
+
+```bash
+ryu-manager /usr/local/lib/python3.8/dist-packages/ryu/app/simple_switch_13.py \
+/usr/local/lib/python3.8/dist-packages/ryu/app/rest_topology.py \
+/usr/local/lib/python3.8/dist-packages/ryu/app/ofctl_rest.py
+```
+
+* `rest_topology.py` → switch, host, link info
+* `ofctl_rest.py` → flow & port stats
+* Must leave **this terminal running**
+
+---
+
+### **Step 2: Start Mininet Topology**
+
+```bash
+sudo mn --topo single,3 --controller=remote --switch ovsk,protocols=OpenFlow13
+```
+
+* Same as Q1, ensures **Ryu controller can see switches**
+
+---
+
+### **Step 3: Discover Switches via REST**
+
+```bash
+curl http://localhost:8080/v1.0/topology/switches
+```
+
+Output:
+
+```json
+[{"dpid": "0000000000000001", "ports": [...]}]
+```
+
+* Confirms **s1 is detected**
+* Shows ports and DPIDs
+
+---
+
+### **Step 4: Discover Hosts**
+
+```bash
+curl http://localhost:8080/v1.0/topology/hosts
+```
+
+* Initially empty → hosts learned **after traffic**
+* Run ping/iperf to populate hosts
+
+---
+
+### **Step 5: Discover Links**
+
+```bash
+curl http://localhost:8080/v1.0/topology/links
+```
+
+* Empty for single-switch topology
+* Multi-switch → shows inter-switch connections
+
+---
+
+### **Step 6: Check Flow Stats**
+
+```bash
+curl http://localhost:8080/stats/flow/1
+```
+
+* Shows flows installed by Ryu
+* Packet & byte counts confirm actual traffic
+* After iperf, you’ll see flows with **in_port/out_port** and counts
+
+---
+
+### **Step 7: Check Port Stats**
+
+```bash
+curl http://localhost:8080/stats/port/1
+```
+
+* Shows traffic per port
+* Rx/Tx bytes & dropped packets confirm throttling works
+
+---
+
+### **Step 8: Test Traffic & Validate**
+
+1. Start iperf server:
+
+```bash
+mininet> h2 iperf -s &
+```
+
+2. Run client:
+
+```bash
+mininet> h1 iperf -c 10.0.0.2 -t 20 -i 1
+```
+
+3. Refresh REST API stats → packet/byte counters increase
+
+* Confirms **controller actively manages traffic**
+
+---
+
+### ✅ **Q2 Summary / Why it Works**
+
+* REST API exposes **controller’s view of the network**
+* Switches, hosts, links, flows, and ports can be queried
+* Validates **controller logic without touching Mininet CLI**
+* Demonstrates **network visibility & programmability**
+
+---
+
+# 🔹 WHY, WHAT, HOW, WHEN, WHERE EVERYTHING WORKS
+
+| Aspect      | Explanation                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Why SDN** | Central control of network simplifies dynamic changes, like throttling traffic, without restarting switches.                                                                                                             |
+| **What**    | OpenFlow flows, meters, and REST APIs allow **traffic management and monitoring**.                                                                                                                                       |
+| **How**     | Ryu controller communicates with Mininet switches via OpenFlow 1.3: <br> 1. `simple_switch_13.py` → installs forwarding flows <br> 2. `add-meter` + `add-flow` → limit bandwidth <br> 3. REST APIs → query network state |
+| **When**    | Flows and meters are applied dynamically; stats update during traffic.                                                                                                                                                   |
+| **Where**   | Mininet hosts (`h1`, `h2`, `h3`) send traffic → switch `s1` enforces rules → Ryu controller installs/updates flows & meters → REST APIs report statistics to user.                                                       |
+
+**Key Points for Beginners:**
+
+* Mininet = **virtual lab**
+* Ryu = **brain/controller**
+* OpenFlow = **language between brain & hands**
+* Flows = **instructions**
+* Meter = **speed limit**
+* REST API = **network visibility dashboard**
+
+---
+
+# 🔹 FULL HEADLESS-VM-FRIENDLY COMMANDS (COPY-PASTE)
+
+### Terminal 1: Ryu Controller
+
+```bash
+ryu-manager /usr/local/lib/python3.8/dist-packages/ryu/app/simple_switch_13.py \
+/usr/local/lib/python3.8/dist-packages/ryu/app/rest_topology.py \
+/usr/local/lib/python3.8/dist-packages/ryu/app/ofctl_rest.py
+```
+
+### Terminal 2: Mininet
+
+```bash
+sudo mn --topo single,3 --controller=remote --switch ovsk,protocols=OpenFlow13
+mininet> pingall
+mininet> h2 iperf -s &
+mininet> h1 iperf -c 10.0.0.2 -t 20 -i 1
+mininet> sh ovs-ofctl -O OpenFlow13 add-meter s1 meter=1,kbps,band=type=drop,rate=1000
+mininet> sh ovs-ofctl -O OpenFlow13 add-flow s1 priority=100,ip,nw_src=10.0.0.1,actions=meter:1,normal
+mininet> sh ovs-ofctl -O OpenFlow13 dump-flows s1
+mininet> sh ovs-ofctl -O OpenFlow13 del-flows s1
+mininet> sh ovs-ofctl -O OpenFlow13 dump-flows s1
+```
+
+### Terminal 3: REST API checks (VM shell)
+
+```bash
+curl http://localhost:8080/v1.0/topology/switches
+curl http://localhost:8080/v1.0/topology/hosts
+curl http://localhost:8080/v1.0/topology/links
+curl http://localhost:8080/stats/flow/1
+curl http://localhost:8080/stats/port/1
+```
+
+---
+
+If you want, I can also **draw a simple diagram showing traffic flow, controller, meters, and REST stats**, so the entire lab can be **understood visually in one slide**.
+
+Do you want me to do that?

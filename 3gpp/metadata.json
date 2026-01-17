@@ -1,0 +1,12 @@
+{
+  "title": "Aimlec_AIMLEClientServiceOperations",
+  "endpoint_count": 1,
+  "endpoints": [
+    {
+      "path": "/perform",
+      "method": "POST",
+      "summary": "Enables the AIMLE server to request the AIMLE client to perform the AIMLE client service operation.\n",
+      "auth": {}
+    }
+  ]
+}
