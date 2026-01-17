@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <title>
+            Welcome to Docker Static Page Demo
+        </title>
+    </head>
+    <body>
+        <h1 id="title">
+            I am a beginner in Devops 
+        </h1>
+        <p id="message">Click the button below to see actions. </p>
+        
+        <button onclick="showMessage()">Click Me</button>
+        <button onclick="changeText()">Change Heading</button>
+        <button onclick="countClicks()">Count Clicks</button>
+
+        <p id="counter">Button Clicked: 0 times</p>
+
+        <script>
+            let clicks = 0;
+
+            function showMessage() {
+                alert("Hello! This is a static HTML page.");
+            }
+
+            function changeText() {
+                document.getElementById("title").innerHTML =
+                    "I am learning DevOps with Docker!";
+            }
+
+            function countClicks() {
+                clicks++;
+                document.getElementById("counter").innerHTML =
+                    "Button clicked: " + clicks + " times";
+            }
+        </script>
+    </body>
+</html>

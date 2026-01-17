@@ -1,0 +1,7 @@
+INFO - Program Started
+DEBUG - User entered first number: 4.0
+DEBUG - User entered second number: 3.0
+DEBUG - User entered operator: +
+DEBUG - calculate() called with a=4.0, b=3.0, op='+'
+INFO - ADD: 4.0 + 3.0 = 7.0
+INFO - Program Ended
